@@ -13,10 +13,23 @@ const connectDB = require('./config/database/database.js'); // Conexión MongoDB
 // =======================
 connectDB();
 
+
+
+
+
 // =======================
 // Inicializar aplicación
 // =======================
 const app = express();
+
+//PUERTO
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`HTTP escuchando en :${PORT}`));
+
+// Varialbes Para RUtas
+const productosRoutes = require('./routes/productos/Productos.js');      // <-- nombre del archivo real
+const ventasRoutes    = require('./routes/ventas/ventas.js');         // <-- nombre del archivo real
+
 
 // =======================
 // Middlewares globales
@@ -38,12 +51,15 @@ const indexRouter = require('./routes/index');
 // 🔗 Todas tus rutas pasarán por /api
 // Ejemplo: /api/productos, /api/ventas, /api/proveedores...
 app.use('/api', indexRouter);
+app.use('/api/productos', productosRoutes);  // <-- este prefijo DEBE coincidir con Insomnia
+app.use('/api/ventas', ventasRoutes);
 
 // =======================
 // Manejo de errores 404
 // =======================
 app.use((req, res) => {
   res.status(404).json({ message: 'Ruta no encontrada' });
+  app.use('/api/ventas', require('./routes/ventas'));
 });
 
 // =======================
@@ -55,6 +71,11 @@ app.use((err, req, res, next) => {
     message: 'Error interno del servidor',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
+});
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ message: 'Error interno', detail: err.message });
 });
 
 // =======================
