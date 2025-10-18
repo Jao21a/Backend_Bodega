@@ -5,11 +5,18 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const hpp = require('hpp');
+const compression = require('compression');
+const morgan = require('morgan');
 require('dotenv').config();
-const connectDB = require('./config/database/database.js'); // Conexión MongoDB
+const connectDB = require('./config/database/database.js');
 
 // =======================
-// Conectar a la base de datos
+// Conexión a la base de datos
 // =======================
 connectDB();
 
@@ -32,13 +39,47 @@ const ventasRoutes    = require('./routes/ventas/ventas.js');         // <-- nom
 
 
 // =======================
+// Seguridad y rendimiento
+// =======================
+app.use(helmet()); // cabeceras seguras
+app.use(mongoSanitize()); // evita NoSQL injection
+app.use(xss()); // limpia entradas de XSS
+app.use(hpp()); // evita parameter pollution
+app.use(compression()); // GZIP
+
+// =======================
+// CORS (ajustar según entorno)
+// =======================
+//app.use(cors({
+//  origin: ['https://tu-front.com', 'http://localhost:5173'], // ajusta tu frontend
+//  credentials: true
+//}));
+
+// =======================
 // Middlewares globales
 // =======================
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+
+// =======================
+// Rate Limiting
+// =======================
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // 100 peticiones por IP
+  message: 'Demasiadas solicitudes desde esta IP, inténtalo más tarde.'
+});
+
+app.use('/api', limiter);
+
+// =======================
+// Logger y parseadores
+// =======================
+app.use(morgan('combined'));
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
-// app.use(express.static(path.join(__dirname, '../public'))); // opcional
+
 
 // =======================
 // Importar rutas principales
